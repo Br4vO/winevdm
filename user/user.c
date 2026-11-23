@@ -3951,6 +3951,24 @@ BOOL16 WINAPI SystemParametersInfo16( UINT16 uAction, UINT16 uParam,
 	break;
     }
 
+    case SPI_SETDESKWALLPAPER:
+        /* Windows 10 keeps a converted copy of the wallpaper (Themes\TranscodedWallpaper) and remembers its
+         * source in TranscodedImageCache.  When a program sets "(None)" and then the same file again, Windows
+         * shows the old copy even though the file has changed (Second Nature Slide Show rewrites SNSIWALP.BMP
+         * on every Play).  Forget the cache entry so Windows reads the file. */
+        if (lpvParam && *(LPCSTR)lpvParam && strcmp((LPCSTR)lpvParam, "(None)"))
+        {
+            HKEY key;
+            if (!RegOpenKeyExA(HKEY_CURRENT_USER, "Control Panel\\Desktop", 0, KEY_SET_VALUE, &key))
+            {
+                RegDeleteValueA(key, "TranscodedImageCache");
+                RegCloseKey(key);
+            }
+        }
+        ret = SystemParametersInfoA( uAction, uParam, lpvParam, fuWinIni );
+        TRACE("SPI_SETDESKWALLPAPER %s -> %d\n", debugstr_a(lpvParam), ret);
+        break;
+
     case SPI_GETWORKAREA:
     {
 	RECT tmp;
